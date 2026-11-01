@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>$100 to $1M — Double Tracker</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1020;--panel:#151d32;--muted:#9aa8c2;--line:#2b3854;--accent:#69e0b1;--gold:#f3c969}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top,#182747 0,#0b1020 55%);color:#f5f7fb;font:16px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;padding:28px 16px}
+main{max-width:760px;margin:auto}.eyebrow{color:var(--accent);font-weight:700;letter-spacing:.12em;text-transform:uppercase;font-size:12px}
+h1{font-size:clamp(30px,6vw,48px);line-height:1.05;margin:8px 0}p{color:var(--muted);margin:8px 0 22px}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:22px 0}
+.card,.tracker{background:rgba(21,29,50,.94);border:1px solid var(--line);border-radius:18px;padding:18px}
+.label{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em}.value{font-size:clamp(21px,4vw,30px);font-weight:800;margin-top:4px}
+.progress-wrap{height:10px;background:#26334d;border-radius:99px;overflow:hidden;margin:12px 0 6px}.progress{height:100%;background:linear-gradient(90deg,var(--accent),#b6f4d9);width:0%;transition:width .2s}
+.tracker{padding:0;overflow:hidden}.top{padding:20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
+h2{font-size:19px;margin:0}.small{font-size:13px;color:var(--muted)}
+button{border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}
+.primary{background:var(--accent);color:#092016}.secondary{background:#273550;color:#eaf0fa}.danger{background:#492b38;color:#ffd9e1}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:13px 18px;border-bottom:1px solid var(--line)}th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.06em}
+tr:last-child td{border-bottom:0}.done{color:var(--accent);font-weight:700}.next{color:var(--gold);font-weight:700}.muted{color:var(--muted)}
+.actions{display:flex;gap:8px;flex-wrap:wrap}.log{padding:18px;border-top:1px solid var(--line);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+input{background:#0d1528;border:1px solid var(--line);border-radius:10px;color:#fff;padding:11px 12px;min-width:130px;font:inherit}
+.note{font-size:12px;color:var(--muted);padding:0 18px 18px}
+@media(max-width:520px){.cards{grid-template-columns:1fr}.card{padding:14px}th,td{padding:11px 10px;font-size:14px}.top{align-items:flex-start}}
+</style>
+</head>
+<body>
+<main>
+  <div class="eyebrow">Personal progress tracker</div>
+  <h1>$100 to $1,000,000</h1>
+  <p>Log each successful double. Your progress saves automatically in this browser.</p>
+  <section class="cards">
+    <div class="card"><div class="label">Current amount</div><div class="value" id="current">$200</div></div>
+    <div class="card"><div class="label">Doubles completed</div><div class="value" id="count">1 / 14</div></div>
+    <div class="card"><div class="label">Next target</div><div class="value" id="next">$400</div></div>
+  </section>
+  <div class="label">Progress to $1 million</div>
+  <div class="progress-wrap"><div class="progress" id="bar"></div></div>
+  <div class="small" id="progressText">1 of 14 doubles completed</div>
+
+  <section class="tracker" style="margin-top:22px">
+    <div class="top"><div><h2>Your doubling milestones</h2><div class="small">Starting balance: $100 · Each target is 2× the previous one</div></div>
+      <div class="actions"><button class="secondary" id="undo">Undo last</button><button class="danger" id="reset">Reset</button></div>
+    </div>
+    <table><thead><tr><th>#</th><th>Target amount</th><th>Status</th></tr></thead><tbody id="rows"></tbody></table>
+    <div class="log">
+      <div style="flex:1;min-width:180px"><div class="label">Log your actual balance</div><div class="small">Enter the amount you reached; the tracker marks every milestone you've passed.</div></div>
+      <input id="amount" type="number" min="0" step="0.01" placeholder="e.g. 400" aria-label="Actual balance">
+      <button class="primary" id="save">Save balance</button>
+    </div>
+    <div class="note">Your entries stay on this device/browser using local storage. Clearing browser data or switching devices may erase or not show your progress. This tracker records progress; it does not verify trades or transactions.</div>
+  </section>
+</main>
+<script>
+const milestones = Array.from({length:15},(_,i)=>100*Math.pow(2,i));
+const fmt = n => new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:2}).format(n);
+let balance = Number(localStorage.getItem('doubleTrackerBalance'));
+if (!Number.isFinite(balance) || balance < 100) balance = 200;
+function completed(){ let n=0; while(n<14 && balance>=milestones[n+1]) n++; return n; }
+function render(){
+ const done=completed(), target=milestones[done+1];
+ document.getElementById('current').textContent=fmt(balance);
+ document.getElementById('count').textContent=done+' / 14';
+ document.getElementById('next').textContent=done===14?'Goal reached':fmt(target);
+ const pct=Math.min(100,Math.max(0,(Math.log2(Math.max(balance,100)/100)/Math.log2(1000000/100))*100));
+ document.getElementById('bar').style.width=pct+'%';
+ document.getElementById('progressText').textContent=done+' of 14 doubles completed · '+pct.toFixed(1)+'% of the way to $1 million';
+ document.getElementById('rows').innerHTML=milestones.map((v,i)=>{
+   let status=i===0?'Starting point':i<=done?'✓ Completed':i===done+1?'Next target':'Not yet';
+   let cls=i<=done?'done':i===done+1?'next':'muted';
+   return `<tr><td>${i}</td><td><strong>${fmt(v)}</strong></td><td class="${cls}">${status}</td></tr>`;
+ }).join('');
+}
+document.getElementById('save').addEventListener('click',()=>{
+ const val=Number(document.getElementById('amount').value);
+ if(!Number.isFinite(val)||val<100){alert('Enter a balance of at least $100.');return;}
+ balance=val;localStorage.setItem('doubleTrackerBalance',String(balance));document.getElementById('amount').value='';render();
+});
+document.getElementById('undo').addEventListener('click',()=>{
+ const done=completed(); balance=done>0?milestones[done]:100;
+ localStorage.setItem('doubleTrackerBalance',String(balance));render();
+});
+document.getElementById('reset').addEventListener('click',()=>{
+ if(confirm('Reset your tracker to the original $100 starting balance?')){
+ balance=100;localStorage.setItem('doubleTrackerBalance','100');render();
+ }
+});
+document.getElementById('amount').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('save').click()});
+render();
+</script>
+</body>
+</html>
